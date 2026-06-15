@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>열화상 카메라 — 열 전도 비교 실험</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#080d18;color:#c8d8e8;font-family:'Malgun Gothic','맑은 고딕',sans-serif;min-height:100vh}
+.hd{background:linear-gradient(135deg,#0c1e35,#152840);border-bottom:2px solid #1e5080;padding:14px 22px}
+.hd h1{font-size:1.3rem;color:#5ab4f0}
+.hd p{font-size:0.78rem;color:#607080;margin-top:2px}
+.wrap{display:flex;gap:12px;padding:12px;max-width:1110px;margin:0 auto}
+.left{flex:1;min-width:0}
+#cv{display:block;border:1px solid #1a2840;border-radius:6px}
+.ctl{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#0e1828;border:1px solid #1a2840;border-radius:6px;margin-top:8px;flex-wrap:wrap}
+.btn{padding:8px 18px;border:1px solid transparent;border-radius:5px;font-family:inherit;font-size:0.82rem;font-weight:bold;cursor:pointer;transition:.15s;letter-spacing:.2px}
+.btn:hover{filter:brightness(1.2)}.btn:active{transform:scale(.97)}
+.bs{background:#0d3d1a;color:#6ee87a;border-color:#1a6a28}
+.bp{background:#3d2000;color:#ffaa44;border-color:#6a3800}
+.br{background:#2d0e0e;color:#f08080;border-color:#5a1c1c}
+.bt{background:#1c0d3a;color:#b880f0;border-color:#3a1a6a}
+.bt.on{background:#3a1a6a;color:#e0b8ff;border-color:#7040c0;box-shadow:0 0 12px rgba(120,60,200,.5)}
+.sel{background:#0e1828;color:#a0b8c8;border:1px solid #1a2840;border-radius:4px;padding:6px 8px;font-family:inherit;font-size:.78rem}
+.td{margin-left:auto;font-family:'Courier New',monospace;font-size:1rem;color:#44cc66;background:#041008;padding:4px 10px;border-radius:4px;border:1px solid #0a3018}
+.right{width:255px;flex-shrink:0}
+.card{background:#0e1828;border:1px solid #1a2840;border-radius:6px;padding:12px;margin-bottom:10px}
+.card h3{font-size:.8rem;color:#5ab4f0;margin-bottom:9px;padding-bottom:5px;border-bottom:1px solid #1a2840}
+.tr{display:flex;align-items:center;gap:6px;padding:3px 0;font-size:.78rem}
+.tn{width:58px}.tv{width:62px;text-align:right;font-family:monospace;font-size:.76rem}
+.tb{flex:1;height:6px;background:#1a2840;border-radius:3px;overflow:hidden}
+.tbf{height:100%;border-radius:3px;transition:width .3s}
+.sl2{list-style:none;padding:0;font-size:.73rem;color:#90a0b0}
+.sl2 li{display:flex;align-items:flex-start;gap:7px;padding:5px 0;border-bottom:1px solid #121e2c;line-height:1.4}
+.sl2 li:last-child{border:none}
+.sn{background:#1a2840;color:#5ab4f0;border-radius:50%;width:18px;height:18px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:bold;margin-top:1px}
+.sts{max-width:1110px;margin:0 auto;padding:3px 12px 6px;font-size:.72rem;color:#506070}
+.snaps{max-width:1110px;margin:0 auto;padding:0 12px 16px}
+.snaps h2{font-size:.88rem;color:#5ab4f0;margin-bottom:8px}
+.sg{display:flex;gap:10px;flex-wrap:wrap}
+.si{text-align:center}.si canvas{display:block;border:1px solid #1a2840;border-radius:4px}
+.si.pend canvas{opacity:.2}.sl{font-size:.68rem;color:#607080;margin-top:4px;font-family:monospace}
+.si.done .sl{color:#44aa66}
+</style>
+</head>
+<body>
+<div class="hd">
+  <h1>🔬 열화상 카메라를 이용한 열 전도 비교 실험</h1>
+  <p>구리(Cu) · 알루미늄(Al) · 유리(Glass) — 금속판을 통한 열 전도 비교</p>
+</div>
+<div class="wrap">
+  <div class="left">
+    <canvas id="cv" width="780" height="550"></canvas>
+    <div class="ctl">
+      <button class="btn bs" id="playBtn" onclick="togglePlay()">▶ 시작</button>
+      <button class="btn br" onclick="resetSim()">↺ 초기화</button>
+      <button class="btn bt" id="thermBtn" onclick="toggleTherm()">📷 열화상 OFF</button>
+      <label style="font-size:.75rem;color:#607080">속도</label>
+      <select class="sel" onchange="ST.speed=+this.value">
+        <option value="5">5×</option><option value="10" selected>10×</option>
+        <option value="20">20×</option><option value="40">40×</option>
+      </select>
+      <div class="td" id="tdisp">⏱ 0분 00초</div>
+    </div>
+  </div>
+  <div class="right">
+    <div class="card">
+      <h3>📊 막대 끝 온도 (자유단)</h3>
+      <div class="tr"><span class="tn" style="color:#d49040">구리</span><span class="tv" id="tCu">20.0°C</span><div class="tb"><div class="tbf" id="bCu" style="background:linear-gradient(90deg,#ff6020,#ffcc00);width:0%"></div></div></div>
+      <div class="tr"><span class="tn" style="color:#b0b8c0">알루미늄</span><span class="tv" id="tAl">20.0°C</span><div class="tb"><div class="tbf" id="bAl" style="background:linear-gradient(90deg,#4090e0,#80c8f0);width:0%"></div></div></div>
+      <div class="tr"><span class="tn" style="color:#70b8d8">유리</span><span class="tv" id="tGl">20.0°C</span><div class="tb"><div class="tbf" id="bGl" style="background:linear-gradient(90deg,#40a860,#80d898);width:0%"></div></div></div>
+      <div style="margin-top:7px;font-size:.68rem;color:#405060">금속판 온도: <span id="tSrc" style="color:#ff7040;font-family:monospace">20.0°C</span></div>
+    </div>
+    <div class="card">
+      <h3>📋 실험 과정</h3>
+      <ul class="sl2">
+        <li><span class="sn">1</span>구리·알루미늄·유리 막대가 붙은 틀을 스탠드에 고정한다.</li>
+        <li><span class="sn">2</span>알콜램프를 금속판 아래에 위치시킨다.</li>
+        <li><span class="sn">3</span>▶ 시작 → 불꽃 점화 → 금속판 가열 → 각 막대로 열전도 시작.</li>
+        <li><span class="sn">4</span>2분 간격으로 열화상 카메라로 촬영한다.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>💡 관찰 결과</h3>
+      <div style="font-size:.7rem;color:#7090a0;line-height:1.8">
+        금속판 → 각 막대로 열이 퍼지는 속도:<br>
+        <span style="color:#d49040">■</span> 구리 — 가장 빠름<br>
+        <span style="color:#b0b8c0">■</span> 알루미늄 — 중간<br>
+        <span style="color:#70b8d8">■</span> 유리 — 거의 전도 안됨
+      </div>
+    </div>
+  </div>
+</div>
+<div class="sts" id="sts">▶ 시작 버튼을 눌러 실험을 시작하세요.</div>
+<div class="snaps">
+  <h2>📸 열화상 스냅샷 (2분 간격 자동 저장)</h2>
+  <div class="sg" id="sg"></div>
+</div>
+
+<script>
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 물리 상수
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const SEGS  = 30;
+const DX    = 0.01;
+const T_AMB = 20;
+const BETA  = 0.0015;
+const SIMDT = 0.04;
+const MAX_T = 480;
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 캔버스 & 레이아웃 (수평 막대 배치)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const canvas = document.getElementById('cv');
+const ctx    = canvas.getContext('2d');
+const CW = canvas.width, CH = canvas.height;   // 780 × 550
+
+// 틀(frame): 좌→우로 뻗는 수평 구조
+const FX=140, FY=102, FW=516, FH=318, FWL=12;
+// 틀 영역: x=[140,656], y=[102,420]
+
+// 금속판 (수직, 틀 왼쪽 안)
+const PLT_X  = FX + FWL;          // 152  — 틀 왼쪽 벽 오른쪽
+const PLT_W  = 20;                 // 금속판 수평 두께
+const PLT_TY = FY + FWL;          // 114  — 금속판 위
+const PLT_BY = FY + FH - FWL;     // 408  — 금속판 아래
+const PLT_H  = PLT_BY - PLT_TY;   // 294
+
+// 막대 (수평): 세그먼트 0 = 왼쪽(금속판), 세그먼트 29 = 오른쪽(자유단)
+const ROD_START_X = PLT_X + PLT_W;        // 172
+const ROD_END_X   = FX + FW - 8;          // 648
+const ROD_LEN     = ROD_END_X - ROD_START_X; // 476
+const SEG_W       = ROD_LEN / SEGS;       // ~15.9 px
+
+const ROD_THICK = 38;   // 막대 수직 두께
+// 틀 내부 높이 = PLT_H = 294. 세 막대(38×3=114) + 여백 4칸 = 294 → 여백 = (294-114)/4 = 45
+const ROD_GAP = (PLT_H - ROD_THICK * 3) / 4;   // 45
+const ROD_CY = [
+  PLT_TY + ROD_GAP       + ROD_THICK / 2,   // 114+45+19=178
+  PLT_TY + ROD_GAP * 2   + ROD_THICK * 1.5, // 114+90+57=261
+  PLT_TY + ROD_GAP * 3   + ROD_THICK * 2.5, // 114+135+95=344
+];
+
+// 알콜램프
+const LAMP_CX = PLT_X + PLT_W / 2;  // 162
+const LAMP_CY = FY + FH + 62;        // 482
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 재료 데이터
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const KEYS = ['cu','al','gl'];
+const MAT = {
+  cu:{ alpha:1.117e-4, col:'#a86828', hi:'#d49040', name:'구리 (Cu)'     },
+  al:{ alpha:8.44e-5,  col:'#7a8898', hi:'#b0b8c0', name:'알루미늄 (Al)' },
+  gl:{ alpha:5.00e-7,  col:'#2868a0', hi:'#70b8d8', name:'유리 (Glass)'  },
+};
+KEYS.forEach(k => { MAT[k].T = new Float64Array(SEGS).fill(T_AMB); });
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 시뮬레이션 상태
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const ST = { t:0, running:false, thermal:false, speed:10, raf:null, snapDone:{} };
+
+function Tplate(t){ return T_AMB + 430*(1-Math.exp(-t/80)); }
+
+function simStep(dt){
+  for(const k of KEYS){
+    const m=MAT[k], T=m.T, r=m.alpha*dt/(DX*DX);
+    const N=new Float64Array(SEGS);
+    N[0]=Tplate(ST.t);   // 왼쪽(금속판) 온도 고정
+    for(let i=1;i<SEGS-1;i++){
+      N[i]=T[i]+r*(T[i-1]-2*T[i]+T[i+1])-BETA*dt*(T[i]-T_AMB);
+      if(N[i]<T_AMB) N[i]=T_AMB;
+    }
+    N[SEGS-1]=T[SEGS-1]+r*(T[SEGS-2]-T[SEGS-1])-0.008*dt*(T[SEGS-1]-T_AMB);
+    if(N[SEGS-1]<T_AMB) N[SEGS-1]=T_AMB;
+    m.T.set(N);
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 열화상 색상 (iron palette)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const PAL=[
+  [0.00,[0,0,0]],[0.13,[60,0,110]],[0.28,[210,0,0]],
+  [0.50,[255,90,0]],[0.68,[255,230,0]],[0.85,[255,255,165]],[1.00,[255,255,255]]
+];
+function tCol(temp){
+  const t=Math.max(0,Math.min(1,(temp-T_AMB)/(450-T_AMB)));
+  for(let i=0;i<PAL.length-1;i++){
+    if(t<=PAL[i+1][0]){
+      const f=(t-PAL[i][0])/(PAL[i+1][0]-PAL[i][0]);
+      return `rgb(${PAL[i][1].map((v,j)=>Math.round(v+f*(PAL[i+1][1][j]-v))).join(',')})`;
+    }
+  }
+  return 'rgb(255,255,255)';
+}
+function hCol(hex, temp){
+  const f=Math.min(1,Math.max(0,(temp-T_AMB)/380));
+  const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+  return `rgb(${Math.round(r+f*(255-r))},${Math.round(g+f*(50-g))},${Math.round(b*(1-f))})`;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 불꽃 — 이글이글 버전
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let fp=0;
+function drawFlame(lx, baseY){
+  fp += 0.20;
+  const flk = 0.82 + 0.18*Math.sin(fp*6.7);
+  ctx.save();
+  const og=ctx.createRadialGradient(lx,baseY-45,6,lx,baseY-45,130);
+  og.addColorStop(0,'rgba(255,90,0,0.38)'); og.addColorStop(.35,'rgba(255,40,0,0.18)'); og.addColorStop(1,'rgba(255,0,0,0)');
+  ctx.globalAlpha=flk; ctx.fillStyle=og; ctx.fillRect(lx-130,baseY-140,260,148);
+  const mg=ctx.createRadialGradient(lx,baseY-30,3,lx,baseY-30,70);
+  mg.addColorStop(0,'rgba(255,160,0,0.55)'); mg.addColorStop(.5,'rgba(255,70,0,0.22)'); mg.addColorStop(1,'rgba(255,30,0,0)');
+  ctx.globalAlpha=flk; ctx.fillStyle=mg; ctx.fillRect(lx-70,baseY-90,140,98);
+  function tongue(ox,ow,oh,color,a,f1=1,f2=1){
+    ctx.globalAlpha=a*flk; ctx.fillStyle=color;
+    ctx.beginPath();
+    const bx=lx+ox, s1=Math.sin(fp*1.1*f1+ox*.09), s2=Math.sin(fp*1.8*f2+ox*.13), c1=Math.cos(fp*.85*f1+ox*.11), c2=Math.cos(fp*2.1*f2+ox*.07);
+    ctx.moveTo(bx-ow/2,baseY);
+    ctx.bezierCurveTo(bx-ow/2+s1*9,baseY-oh*.38,bx+ow/2+c1*8,baseY-oh*.22,bx+s2*13,baseY-oh);
+    ctx.bezierCurveTo(bx+ow/2+c2*7,baseY-oh*.28,bx-ow/2+s1*6,baseY-oh*.42,bx-ow/2,baseY);
+    ctx.fill();
+  }
+  tongue(-22,34,88,'#cc1800',.88,.8,1.3); tongue(18,30,82,'#bb2000',.84,1.2,.9);
+  tongue(-6,38,108,'#dd2200',.92,1.0,1.1); tongue(12,28,92,'#cc2800',.86,.9,1.4);
+  tongue(-14,26,78,'#ee2400',.80,1.3,.8); tongue(24,22,72,'#bb1800',.74,.7,1.2);
+  tongue(-14,30,98,'#ff5000',.90,1.1,.9); tongue(6,36,118,'#ff4400',.94,.9,1.2);
+  tongue(-2,32,108,'#ff6200',.88,1.3,1.0); tongue(16,26,88,'#ff4800',.82,.8,1.3);
+  tongue(-20,24,82,'#ff5500',.78,1.2,.8);
+  tongue(-8,26,92,'#ffaa00',.84,1.0,1.4); tongue(4,30,106,'#ff8800',.88,1.2,.9);
+  tongue(-1,24,82,'#ffcc00',.78,.8,1.1); tongue(10,20,74,'#ffaa00',.74,1.4,.8);
+  tongue(-4,20,80,'#ffdd00',.72,1.1,1.5); tongue(2,18,88,'#ffee20',.68,1.5,1.0);
+  tongue(0,14,70,'#ffff80',.60,.9,1.3); tongue(-1,10,60,'#fffff0',.50,1.3,1.1);
+  const cg=ctx.createRadialGradient(lx,baseY-12,2,lx,baseY-12,22);
+  cg.addColorStop(0,'rgba(255,255,240,.85)'); cg.addColorStop(.6,'rgba(255,220,80,.40)'); cg.addColorStop(1,'rgba(255,140,0,0)');
+  ctx.globalAlpha=flk*.9; ctx.fillStyle=cg;
+  ctx.beginPath(); ctx.ellipse(lx,baseY-12,18,14,0,0,Math.PI*2); ctx.fill();
+  ctx.globalAlpha=1; ctx.restore();
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 알콜램프
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function drawLamp(lx, cy){
+  const g=ctx.createLinearGradient(lx-28,0,lx+28,0);
+  g.addColorStop(0,'#2a6060'); g.addColorStop(.35,'#4a9090'); g.addColorStop(1,'#1e5050');
+  ctx.fillStyle=g; ctx.beginPath(); ctx.ellipse(lx,cy,28,15,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(lx,cy+14,28,6,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#1a4040'; ctx.fillRect(lx-5,cy-30,10,30);
+  ctx.fillStyle='#5aacac'; ctx.beginPath(); ctx.ellipse(lx,cy-12,15,5,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(180,220,220,.4)';
+  ctx.font='9px sans-serif'; ctx.textAlign='center'; ctx.fillText('알콜램프',lx,cy+5);
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 스탠드 (오른쪽)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function drawStand(){
+  const px=714;
+  ctx.fillStyle='#1a2838'; ctx.fillRect(px-38,CH-65,76,14);
+  const pg=ctx.createLinearGradient(px-5,0,px+5,0);
+  pg.addColorStop(0,'#304050'); pg.addColorStop(.4,'#506070'); pg.addColorStop(1,'#203040');
+  ctx.fillStyle=pg; ctx.fillRect(px-5,38,10,CH-103);
+  const armY=FY+8;
+  ctx.strokeStyle='#506070'; ctx.lineWidth=5;
+  ctx.beginPath(); ctx.arc(px,armY,13,0,Math.PI*2); ctx.stroke();
+  ctx.strokeStyle='#404e5e'; ctx.lineWidth=7; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(px-13,armY); ctx.lineTo(FX+FW,armY); ctx.stroke();
+  ctx.fillStyle='#506070'; ctx.fillRect(FX+FW-8,armY-11,15,22);
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 틀 (frame) — 위/아래 가로 벽 + 왼쪽 세로 벽, 오른쪽 개방
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function drawFrame(tv){
+  if(tv){
+    ctx.strokeStyle='rgba(255,255,255,.06)'; ctx.lineWidth=FWL;
+    ctx.beginPath();
+    ctx.moveTo(FX+FWL/2,FY+FWL/2); ctx.lineTo(FX+FW,FY+FWL/2);        // 위쪽
+    ctx.moveTo(FX+FWL/2,FY+FH-FWL/2); ctx.lineTo(FX+FW,FY+FH-FWL/2); // 아래쪽
+    ctx.moveTo(FX+FWL/2,FY+FWL/2); ctx.lineTo(FX+FWL/2,FY+FH-FWL/2); // 왼쪽
+    ctx.stroke();
+    return;
+  }
+  // 위쪽 가로 벽
+  const tg=ctx.createLinearGradient(0,FY,0,FY+FWL);
+  tg.addColorStop(0,'#5a6a7a'); tg.addColorStop(1,'#3a4a5a');
+  ctx.fillStyle=tg; ctx.fillRect(FX,FY,FW,FWL);
+  // 아래쪽 가로 벽
+  const bg=ctx.createLinearGradient(0,FY+FH-FWL,0,FY+FH);
+  bg.addColorStop(0,'#3a4a5a'); bg.addColorStop(1,'#5a6a7a');
+  ctx.fillStyle=bg; ctx.fillRect(FX,FY+FH-FWL,FW,FWL);
+  // 왼쪽 세로 벽
+  const lg=ctx.createLinearGradient(FX,0,FX+FWL,0);
+  lg.addColorStop(0,'#4a5a6a'); lg.addColorStop(1,'#2a3a4a');
+  ctx.fillStyle=lg; ctx.fillRect(FX,FY,FWL,FH);
+  // 볼트
+  [[FX+FWL/2,FY+FWL/2],[FX+FWL/2,FY+FH-FWL/2],
+   [FX+FW*.35,FY+FWL/2],[FX+FW*.7,FY+FWL/2],
+   [FX+FW*.35,FY+FH-FWL/2],[FX+FW*.7,FY+FH-FWL/2]].forEach(([bx,by])=>{
+    ctx.fillStyle='#607888'; ctx.beginPath(); ctx.arc(bx,by,3,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#303e4e'; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(bx,by,3,0,Math.PI*2); ctx.stroke();
+  });
+  ctx.fillStyle='rgba(140,170,190,.3)'; ctx.font='9px sans-serif'; ctx.textAlign='left';
+  ctx.fillText('틀', FX+FWL+3, FY+FWL-1);
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 금속판 (수직, 틀 왼쪽)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function drawPlate(tv){
+  const pT=Tplate(ST.t);
+  if(tv){
+    // 열화상: 아래쪽(불꽃 직접 가열)이 더 뜨거운 세로 그라디언트
+    const g=ctx.createLinearGradient(0,PLT_TY,0,PLT_BY);
+    g.addColorStop(0, tCol(pT*0.82));
+    g.addColorStop(0.55, tCol(pT));
+    g.addColorStop(1, tCol(pT*0.90));
+    ctx.fillStyle=g; ctx.fillRect(PLT_X,PLT_TY,PLT_W,PLT_H);
+  } else {
+    const heat=Math.min(1,(pT-T_AMB)/400);
+    const r=Math.round(110+heat*145), gv=Math.round(118-heat*90), b=Math.round(118-heat*118);
+    const mg=ctx.createLinearGradient(PLT_X,0,PLT_X+PLT_W,0);
+    mg.addColorStop(0,`rgb(${r},${gv},${b})`);
+    mg.addColorStop(.5,`rgb(${Math.min(255,r+30)},${Math.max(0,gv+15)},${Math.max(0,b+5)})`);
+    mg.addColorStop(1,`rgb(${r},${gv},${b})`);
+    ctx.fillStyle=mg; ctx.fillRect(PLT_X,PLT_TY,PLT_W,PLT_H);
+    ctx.strokeStyle='rgba(0,0,0,.55)'; ctx.lineWidth=1; ctx.strokeRect(PLT_X,PLT_TY,PLT_W,PLT_H);
+    if(heat>0.04){ ctx.fillStyle=`rgba(255,90,0,${heat*.25})`; ctx.fillRect(PLT_X,PLT_TY,PLT_W,PLT_H); }
+    // 세로 방향 라벨
+    ctx.save();
+    ctx.translate(PLT_X+PLT_W/2, PLT_TY+PLT_H/2);
+    ctx.rotate(-Math.PI/2);
+    ctx.fillStyle=`rgba(220,230,240,${0.28+heat*.15})`;
+    ctx.font='bold 9px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('금속판', 0, 4);
+    ctx.restore();
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 막대 (수평, 왼→오른쪽으로 열 전달)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function drawRods(tv){
+  for(let i=0;i<3;i++){
+    const k=KEYS[i], m=MAT[k], T=m.T;
+    const ry = ROD_CY[i] - ROD_THICK/2;  // 막대 위쪽 y
+
+    if(!tv && k==='gl'){
+      // 유리: 반투명 막대
+      ctx.globalAlpha=0.30;
+      ctx.fillStyle='#c0e0f8';
+      ctx.fillRect(ROD_START_X, ry, ROD_LEN, ROD_THICK);
+      ctx.globalAlpha=1;
+      for(let j=0;j<SEGS;j++){
+        const heat=Math.min(1,Math.max(0,(T[j]-T_AMB)/380));
+        if(heat>0.02){
+          ctx.globalAlpha=heat*0.55;
+          ctx.fillStyle=`rgb(255,${Math.round(90-heat*70)},0)`;
+          ctx.fillRect(ROD_START_X+j*SEG_W, ry, SEG_W+.9, ROD_THICK);
+        }
+      }
+      ctx.globalAlpha=1;
+      // 위쪽 광택 (수평 막대이므로 세로 방향 shine)
+      const shine=ctx.createLinearGradient(0,ry,0,ry+ROD_THICK);
+      shine.addColorStop(0,'rgba(255,255,255,0.50)');
+      shine.addColorStop(0.2,'rgba(255,255,255,0.18)');
+      shine.addColorStop(0.5,'rgba(255,255,255,0.04)');
+      shine.addColorStop(1,'rgba(255,255,255,0.00)');
+      ctx.fillStyle=shine; ctx.fillRect(ROD_START_X,ry,ROD_LEN,ROD_THICK);
+      ctx.strokeStyle='rgba(160,215,245,0.65)'; ctx.lineWidth=1;
+      ctx.strokeRect(ROD_START_X,ry,ROD_LEN,ROD_THICK);
+    } else {
+      for(let j=0;j<SEGS;j++){
+        ctx.fillStyle = tv ? tCol(T[j]) : hCol(m.col,T[j]);
+        ctx.fillRect(ROD_START_X+j*SEG_W, ry, SEG_W+.9, ROD_THICK);
+      }
+      if(!tv){
+        ctx.strokeStyle='rgba(0,0,0,.4)'; ctx.lineWidth=1;
+        ctx.strokeRect(ROD_START_X,ry,ROD_LEN,ROD_THICK);
+      }
+    }
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 라벨 (재료명: 틀 왼쪽 / 자유단 온도: 막대 오른쪽)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function drawLabels(tv){
+  KEYS.forEach((k,i)=>{
+    const m=MAT[k], cy=ROD_CY[i];
+    ctx.font='bold 12px Malgun Gothic,sans-serif';
+    ctx.textAlign='right';
+    ctx.fillStyle = tv ? 'rgba(255,255,255,.75)' : m.hi;
+    ctx.fillText(m.name, FX-6, cy+5);
+    // 자유단(오른쪽 끝) 온도
+    const freeT=m.T[SEGS-1];
+    ctx.font='10px Malgun Gothic,sans-serif';
+    ctx.textAlign='left';
+    ctx.fillStyle = tv ? 'rgba(0,255,120,.7)' : '#4a6a84';
+    ctx.fillText(`${freeT.toFixed(1)}°C`, ROD_END_X+6, cy+5);
+  });
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 온도 컬러 스케일 (열화상 모드, 오른쪽)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function drawScale(){
+  const sx=752, sy=FY, sw=14, sh=FH;
+  for(let i=0;i<sh;i++){
+    ctx.fillStyle=tCol(T_AMB+(1-i/sh)*(450-T_AMB));
+    ctx.fillRect(sx,sy+i,sw,1);
+  }
+  ctx.strokeStyle='rgba(255,255,255,.15)'; ctx.lineWidth=1; ctx.strokeRect(sx,sy,sw,sh);
+  ctx.fillStyle='rgba(255,255,255,.6)'; ctx.font='8px monospace'; ctx.textAlign='right';
+  ctx.fillText('450°C',sx-2,sy+8);
+  ctx.fillText('235°C',sx-2,sy+sh/2+4);
+  ctx.fillText(' 20°C',sx-2,sy+sh-2);
+}
+
+function drawCamOverlay(){
+  ctx.save();
+  for(let y=0;y<CH;y+=4){ ctx.fillStyle='rgba(0,0,0,.055)'; ctx.fillRect(0,y,CW,1); }
+  ctx.strokeStyle='rgba(0,255,80,.4)'; ctx.lineWidth=2;
+  const b=16,L=26;
+  [[b,b,1,1],[CW-b,b,-1,1],[b,CH-b,1,-1],[CW-b,CH-b,-1,-1]].forEach(([ox,oy,sx,sy])=>{
+    ctx.beginPath(); ctx.moveTo(ox+sx*L,oy); ctx.lineTo(ox,oy); ctx.lineTo(ox,oy+sy*L); ctx.stroke();
+  });
+  ctx.fillStyle='rgba(0,255,80,.65)'; ctx.font='bold 10px monospace'; ctx.textAlign='left';
+  ctx.fillText('IR CAM',b+4,b+14);
+  ctx.restore();
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 전체 렌더링
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function render(){
+  const tv=ST.thermal;
+  ctx.fillStyle=tv?'#000':'#0c1220'; ctx.fillRect(0,0,CW,CH);
+  if(!tv){
+    ctx.fillStyle='rgba(255,255,255,.01)';
+    for(let x=0;x<CW;x+=50) ctx.fillRect(x,0,1,CH);
+    for(let y=0;y<CH;y+=50) ctx.fillRect(0,y,CW,1);
+  }
+
+  drawStand();
+  drawFrame(tv);
+
+  // 불꽃은 금속판/막대보다 먼저 (뒤에 가려짐)
+  if(!tv && ST.t>0) drawFlame(LAMP_CX, LAMP_CY-32);
+
+  // 막대 → 금속판이 왼쪽 끝을 덮음
+  drawRods(tv);
+  drawPlate(tv);
+
+  if(!tv) drawLamp(LAMP_CX, LAMP_CY);
+
+  drawLabels(tv);
+  if(tv){ drawScale(); drawCamOverlay(); }
+
+  const mm=String(Math.floor(ST.t/60)).padStart(2,'0'), ss=String(Math.floor(ST.t%60)).padStart(2,'0');
+  ctx.fillStyle=tv?'rgba(0,255,100,.85)':'rgba(90,180,255,.75)';
+  ctx.font='bold 12px monospace'; ctx.textAlign='right';
+  ctx.fillText(`${mm}:${ss}`, tv?747:CW-8, 16);
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 스냅샷 (수평 막대 미니 버전)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const STIMES=[0,120,240,360,480];
+const SW=190, SH=165;
+
+function initSnaps(){
+  const g=document.getElementById('sg'); g.innerHTML='';
+  STIMES.forEach(t=>{
+    const d=document.createElement('div'); d.className='si pend'; d.id=`si${t}`;
+    const c=document.createElement('canvas'); c.width=SW; c.height=SH; c.id=`sc${t}`;
+    const l=document.createElement('div'); l.className='sl'; l.textContent=`${t/60}분 경과`;
+    d.append(c,l); g.append(d);
+  });
+}
+
+function drawSnapCanvas(sc, temps, pTemp){
+  const s=sc.getContext('2d');
+  s.fillStyle='#000'; s.fillRect(0,0,SW,SH);
+
+  // 레이아웃
+  const rThick=28, startX=42, endX=SW-18, rLen=endX-startX;
+  const sww=rLen/SEGS;
+  const pltW=8;
+  const cy=[38, 82, 126];   // 세 막대 중심 y
+
+  // 금속판 (세로)
+  const pltTY=cy[0]-rThick/2, pltBY=cy[2]+rThick/2;
+  const pg=s.createLinearGradient(0,pltTY,0,pltBY);
+  pg.addColorStop(.4,tCol(pTemp)); pg.addColorStop(1,tCol(pTemp*.85));
+  s.fillStyle=pg; s.fillRect(startX-pltW, pltTY, pltW, pltBY-pltTY);
+
+  // 세 막대
+  const lb=['Cu','Al','Gl'], lc=['#d49040','#b0b8c0','#70b8d8'];
+  KEYS.forEach((k,i)=>{
+    const T=temps[k], ry=cy[i]-rThick/2;
+    for(let j=0;j<SEGS;j++){
+      s.fillStyle=tCol(T[j]);
+      s.fillRect(startX+j*sww, ry, sww+.8, rThick);
+    }
+    s.font='bold 8px sans-serif'; s.textAlign='right'; s.fillStyle=lc[i];
+    s.fillText(lb[i], startX-pltW-2, cy[i]+4);
+  });
+
+  // 컬러 스케일 (오른쪽)
+  const scH=pltBY-pltTY;
+  for(let i=0;i<scH;i++){
+    s.fillStyle=tCol(T_AMB+(1-i/scH)*(450-T_AMB));
+    s.fillRect(SW-10, pltTY+i, 7, 1);
+  }
+}
+
+function takeSnap(t){
+  const sc=document.getElementById(`sc${t}`); if(!sc) return;
+  const temps={}, pT=Tplate(t);
+  KEYS.forEach(k=>{ temps[k]=new Float64Array(MAT[k].T); });
+  drawSnapCanvas(sc,temps,pT);
+  const d=document.getElementById(`si${t}`);
+  if(d){ d.classList.remove('pend'); d.classList.add('done'); }
+  ST.snapDone[t]=true;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// UI 업데이트
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function updateUI(){
+  const mm=Math.floor(ST.t/60), ss=Math.floor(ST.t%60);
+  document.getElementById('tdisp').textContent=`⏱ ${mm}분 ${String(ss).padStart(2,'0')}초`;
+  document.getElementById('tSrc').textContent=`${Tplate(ST.t).toFixed(1)}°C`;
+  [['tCu','bCu'],['tAl','bAl'],['tGl','bGl']].forEach(([tv,tb],i)=>{
+    const v=MAT[KEYS[i]].T[SEGS-1];
+    const p=Math.min(100,(v-T_AMB)/(450-T_AMB)*100);
+    document.getElementById(tv).textContent=`${v.toFixed(1)}°C`;
+    document.getElementById(tb).style.width=`${p}%`;
+  });
+}
+function setStatus(s){ document.getElementById('sts').textContent=s; }
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 메인 루프
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function loop(ts){
+  if(!ST.running) return;
+  const dr=ST.raf?Math.min((ts-ST.raf)/1000,.05):.016; ST.raf=ts;
+  const dsim=dr*ST.speed, n=Math.ceil(dsim/SIMDT), dt=dsim/n;
+  for(let i=0;i<n;i++){
+    ST.t=Math.min(ST.t+dt,MAX_T);
+    simStep(dt);
+    STIMES.forEach(st=>{
+      if(st>0&&!ST.snapDone[st]&&ST.t>=st){
+        takeSnap(st); setStatus(`📸 ${st/60}분 경과 — 열화상 스냅샷 저장됨`);
+      }
+    });
+  }
+  render(); updateUI();
+  if(ST.t>=MAX_T){
+    ST.running=false;
+    const b=document.getElementById('playBtn');
+    b.textContent='✓ 완료'; b.disabled=true;
+    setStatus('실험 완료 (8분). 아래 열화상 스냅샷을 확인하세요.');
+    return;
+  }
+  requestAnimationFrame(loop);
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 컨트롤
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function togglePlay(){
+  ST.running=!ST.running;
+  const b=document.getElementById('playBtn');
+  if(ST.running){
+    b.textContent='⏸ 일시정지'; b.className='btn bp';
+    ST.raf=null; setStatus('실험 진행 중 — 알콜램프로 금속판을 가열합니다...');
+    requestAnimationFrame(loop);
+  } else {
+    b.textContent='▶ 재개'; b.className='btn bs';
+    setStatus('일시정지 됨.');
+  }
+}
+function resetSim(){
+  location.reload();
+}
+function toggleTherm(){
+  ST.thermal=!ST.thermal;
+  const b=document.getElementById('thermBtn');
+  b.textContent=ST.thermal?'📷 열화상 ON':'📷 열화상 OFF';
+  b.classList.toggle('on',ST.thermal);
+  render();
+}
+
+// 초기화
+initSnaps(); takeSnap(0); render(); updateUI();
+</script>
+</body>
+</html>
