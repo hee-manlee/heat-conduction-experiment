@@ -106,7 +106,7 @@ const DX    = 0.01;
 const T_AMB = 20;
 const BETA  = 0.0015;
 const SIMDT = 0.04;
-const MAX_T = 480;
+const MAX_T = 360;
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 캔버스 & 레이아웃 (수평 막대 배치)
@@ -470,7 +470,7 @@ function render(){
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 스냅샷 (수평 막대 미니 버전)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-const STIMES=[0,120,240,360,480];
+const STIMES=[0,120,240,360];
 const SW=190, SH=165;
 
 function initSnaps(){
@@ -566,7 +566,7 @@ function loop(ts){
     ST.running=false;
     const b=document.getElementById('playBtn');
     b.textContent='✓ 완료'; b.disabled=true;
-    setStatus('실험 완료 (8분). 아래 열화상 스냅샷을 확인하세요.');
+    setStatus('실험 완료 (6분). 아래 열화상 스냅샷을 확인하세요.');
     return;
   }
   requestAnimationFrame(loop);
